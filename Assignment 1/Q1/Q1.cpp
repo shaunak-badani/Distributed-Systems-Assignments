@@ -127,14 +127,41 @@ int main( int argc, char **argv ) {
     MPI_Reduce(&j, &no_regular_samples, 1, MPI_INT, MPI_SUM, root_process, MPI_COMM_WORLD);
     MPI_Gather( local_regular_samples, j, MPI_INT, regular_samples, j, MPI_INT, root_process, MPI_COMM_WORLD); 
 
+    int pivots[max_rows / p], no_of_pivots;
+
     if(rank == root_process) {
         quick_sort(regular_samples, 0, no_regular_samples - 1);
         
-        for(int i = 0 ; i < no_regular_samples ; i++) {
-            printf("%d ", regular_samples[i]);
-        }
-    }
-    
+        // for(int i = 0 ; i < no_regular_samples ; i++) {
+        //     printf("%d ", regular_samples[i]);
+        // }
+  
+	    int no_sorted_samples;
+
+	    int sorted_sample_spacing = no_regular_samples / p;
+	    for(i = sorted_sample_spacing , no_sorted_samples = 0 ; i < no_regular_samples ; i+= sorted_sample_spacing, no_sorted_samples++ ) {
+	    	pivots[no_sorted_samples] = regular_samples[i];
+	    }
+
+	    // printf("sorted regular sample : ");
+	    // for(i = 0 ; i < no_sorted_samples ; i++) {
+	    // 	printf("%d ", pivots[i]);
+	    // }
+
+	    for(int id = 1 ; id < p ; id++ ) {
+            ierr = MPI_Send( &no_sorted_samples, 1 , MPI_INT, id, send_data_tag, MPI_COMM_WORLD);
+	    }
+	    no_of_pivots = no_sorted_samples;
+	}
+	else {
+    	ierr = MPI_Recv( &no_of_pivots, 1, MPI_INT, root_process, send_data_tag, MPI_COMM_WORLD, &status);		
+	}
+    MPI_Bcast(&pivots, no_of_pivots, MPI_INT, root_process, MPI_COMM_WORLD);
+    printf("%d\n", rank);	
+	for(i = 0 ; i < no_of_pivots ; i++) {
+		printf("%d ", pivots[i]);
+	}
+	printf("\n");
 
     /* Code ends here */
 
