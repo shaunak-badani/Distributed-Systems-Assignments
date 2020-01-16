@@ -94,16 +94,46 @@ int main( int argc, char **argv ) {
           
         ierr = MPI_Recv( &arr, rows_receive, MPI_INT, root_process, send_data_tag, MPI_COMM_WORLD, &status);
 
-        quick_sort(arr, 0, rows_receive - 1);
     }
 
-    printf("Numbers received by %d are : \n", rank);
     quick_sort(arr, 0, rows_receive - 1);
-    for(int i = 0 ; i < rows_receive ; i++) {
-        printf("%d ", arr[i]);
-    }   
+    // printf("Numbers received by %d are : \n", rank);
+    // for(int i = 0 ; i < rows_receive ; i++) {
+    //     printf("%d ", arr[i]);
+    // }   
+    // printf("\n");
+
+    int local_regular_samples[max_rows / (p*p)], spacing;
+
+    spacing = rows_receive / p;
+
+    int i, j;
+    for(i = 0, j = 0 ; i < rows_receive ; j++, i += spacing) {
+        local_regular_samples[j] = arr[i];
+    }
+
+    printf("For rank %d : ", rank);
+    for(int l = 0 ; l < j; l++) {
+        printf("%d ", local_regular_samples[l]);
+    }
     printf("\n");
 
+    int regular_samples[max_rows / p];
+
+    int no_regular_samples;
+
+
+    // gathering number of regular samples from all processors
+    MPI_Reduce(&j, &no_regular_samples, 1, MPI_INT, MPI_SUM, root_process, MPI_COMM_WORLD);
+    MPI_Gather( local_regular_samples, j, MPI_INT, regular_samples, j, MPI_INT, root_process, MPI_COMM_WORLD); 
+
+    if(rank == root_process) {
+        quick_sort(regular_samples, 0, no_regular_samples - 1);
+        
+        for(int i = 0 ; i < no_regular_samples ; i++) {
+            printf("%d ", regular_samples[i]);
+        }
+    }
     
 
     /* Code ends here */
