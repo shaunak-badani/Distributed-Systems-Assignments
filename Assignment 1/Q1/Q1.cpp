@@ -9,7 +9,6 @@
 
 using namespace std;
 
-
 /* QUICKSORT CODE */
 
 void swap(int *a, int *b) {
@@ -19,7 +18,7 @@ void swap(int *a, int *b) {
 }
 
 // Returns the position of the pivot
-int partition(int arr[], int l, int r) {
+int partition(vector<int>& arr, int l, int r) {
     // choosing pivot to be the last element
     int pivot = arr[r];
     int i = l - 1;
@@ -34,7 +33,7 @@ int partition(int arr[], int l, int r) {
     return i;
 }
 
-void quick_sort(int arr[], int l, int r) {
+void quick_sort(vector<int>& arr, int l, int r) {
     if( l > r ) { return; }
 
     int q = partition(arr, l, r);
@@ -44,9 +43,29 @@ void quick_sort(int arr[], int l, int r) {
 
 /* END QUICKSORT CODE */
 
+/* VECTOR SEND AND RECEIVE WRAPPERS */
+
+int send_vector(vector<int>& v, int start_pos, int no_of_elements, int rank, MPI_Comm world) {
+    int ierr = MPI_Send( &no_of_elements, 1 , MPI_INT, rank, send_data_tag, world);
+    ierr = MPI_Send( &v[start_pos], no_of_elements, MPI_INT, rank, send_data_tag, world);   
+    return ierr;
+}
+
+vector<int> receive_vector(int rank, MPI_Comm world) {
+    vector<int> v;
+    int rows_receive, ierr;
+    MPI_Status status;
+    ierr = MPI_Recv( &rows_receive, 1, MPI_INT, rank, send_data_tag, world, &status);
+    v.resize(rows_receive);
+    ierr = MPI_Recv( &v[0], rows_receive, MPI_INT, rank, send_data_tag, world, &status);
+    return v;
+}
+
+/* END WRAPPERS */
+
 int main( int argc, char **argv ) {
     int rank, p, ierr, rows_receive;
-    int arr[max_rows];
+    vector<int> arr;
 
     /* start up MPI */
     MPI_Init( &argc, &argv );
@@ -61,7 +80,7 @@ int main( int argc, char **argv ) {
     /* write your code here */
 
     int root_process = 0;
-    int n, w, l, r, rows_send;
+    int n, w, l, r, rows_send, input;
 
     MPI_Status status;
 
@@ -69,8 +88,11 @@ int main( int argc, char **argv ) {
 
     if(rank == root_process) {
         cin >> n;
-        int arr[max_rows];
-        for(int i = 0 ; i < n ; i++) { cin >> arr[i]; }
+        // int arr[max_rows];
+        for(int i = 0 ; i < n ; i++) { 
+            cin >> input;
+            arr.push_back(input);
+        }
 
         w = n / p;
 
@@ -84,84 +106,33 @@ int main( int argc, char **argv ) {
 
             rows_send = r - l + 1;
 
-            ierr = MPI_Send( &rows_send, 1 , MPI_INT, id, send_data_tag, MPI_COMM_WORLD);
-            ierr = MPI_Send( &arr[l], rows_send, MPI_INT, id, send_data_tag, MPI_COMM_WORLD);
+            // send_vector(vector, starting position,
+            //              no of rows to send, rank of process to send, world)
+            send_vector(arr, l, rows_send, id, MPI_COMM_WORLD);
         }
         rows_receive = w;
     }
     else {
-        ierr = MPI_Recv( &rows_receive, 1, MPI_INT, root_process, send_data_tag, MPI_COMM_WORLD, &status);
-          
-        ierr = MPI_Recv( &arr, rows_receive, MPI_INT, root_process, send_data_tag, MPI_COMM_WORLD, &status);
-
+        arr = receive_vector(root_process, MPI_COMM_WORLD);
     }
 
+    printf("Numbers received by %d are : \n", rank);
+    for(int i = 0 ; i < arr.size() ; i++) {
+        printf("%d ", arr[i]);
+    }   
     quick_sort(arr, 0, rows_receive - 1);
-    // printf("Numbers received by %d are : \n", rank);
-    // for(int i = 0 ; i < rows_receive ; i++) {
-    //     printf("%d ", arr[i]);
-    // }   
-    // printf("\n");
 
-    int local_regular_samples[max_rows / (p*p)], spacing;
-
-    spacing = rows_receive / p;
-
-    int i, j;
-    for(i = 0, j = 0 ; i < rows_receive ; j++, i += spacing) {
-        local_regular_samples[j] = arr[i];
-    }
-
-    printf("For rank %d : ", rank);
-    for(int l = 0 ; l < j; l++) {
-        printf("%d ", local_regular_samples[l]);
-    }
     printf("\n");
 
-    int regular_samples[max_rows / p];
-
-    int no_regular_samples;
-
-
     // gathering number of regular samples from all processors
-    MPI_Reduce(&j, &no_regular_samples, 1, MPI_INT, MPI_SUM, root_process, MPI_COMM_WORLD);
-    MPI_Gather( local_regular_samples, j, MPI_INT, regular_samples, j, MPI_INT, root_process, MPI_COMM_WORLD); 
+ //    MPI_Reduce(&j, &no_regulra_samples, 1, MPI_INT, MPI_SUM, root_process, MPI_COMM_WORLD);
+ //    MPI_Gather(local_regular_samples, j, MPI_INT, regular_samples, j, MPI_INT, root_process, MPI_COMM_WORLD); 
 
-    int pivots[max_rows / p], no_of_pivots;
+ //    int pivots[max_rows / p], no_of_pivots;
 
-    if(rank == root_process) {
-        quick_sort(regular_samples, 0, no_regular_samples - 1);
-        
-        // for(int i = 0 ; i < no_regular_samples ; i++) {
-        //     printf("%d ", regular_samples[i]);
-        // }
-  
-	    int no_sorted_samples;
-
-	    int sorted_sample_spacing = no_regular_samples / p;
-	    for(i = sorted_sample_spacing , no_sorted_samples = 0 ; i < no_regular_samples ; i+= sorted_sample_spacing, no_sorted_samples++ ) {
-	    	pivots[no_sorted_samples] = regular_samples[i];
-	    }
-
-	    // printf("sorted regular sample : ");
-	    // for(i = 0 ; i < no_sorted_samples ; i++) {
-	    // 	printf("%d ", pivots[i]);
-	    // }
-
-	    for(int id = 1 ; id < p ; id++ ) {
-            ierr = MPI_Send( &no_sorted_samples, 1 , MPI_INT, id, send_data_tag, MPI_COMM_WORLD);
-	    }
-	    no_of_pivots = no_sorted_samples;
-	}
-	else {
-    	ierr = MPI_Recv( &no_of_pivots, 1, MPI_INT, root_process, send_data_tag, MPI_COMM_WORLD, &status);		
-	}
-    MPI_Bcast(&pivots, no_of_pivots, MPI_INT, root_process, MPI_COMM_WORLD);
-    printf("%d\n", rank);	
-	for(i = 0 ; i < no_of_pivots ; i++) {
-		printf("%d ", pivots[i]);
-	}
-	printf("\n");
+ //    if(rank == root_process) {
+ //        // quick_sort(regular_samples, 0, no_regular_samples - 1);
+	// }
 
     /* Code ends here */
 
