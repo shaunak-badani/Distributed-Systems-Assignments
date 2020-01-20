@@ -1,6 +1,8 @@
 #include <stdio.h>
-#include <string.h>
+#include <string>
 #include <bits/stdc++.h>
+#include <math.h>
+#include <fstream>
 #include "mpi.h"
 
 #define send_data_tag 2001
@@ -8,6 +10,101 @@
 #define max_rows 10000
 
 using namespace std;
+
+void print_vector(vector<int>& v) {
+    for(vector<int>::iterator i = v.begin() ; i != v.end() ; i++) cout << *i << " " ;
+    cout << endl;
+}
+
+/* BEGIN K WAY MERGE CODE */
+
+typedef struct node {
+    unsigned long long int u;
+    int array; // array element from which it was picked
+    int index; // 
+}node;
+
+int parent(int i) { return (i - 1) / 2 ; }
+
+int left(int i) { return 2*i + 1; }
+
+int right(int i) { return 2*i + 2; }
+
+void min_heapify(vector<node>& v, int i) {
+    int l = left(i);
+    int r = right(i);
+    int smaller;
+    if(l < v.size() && v[l].u < v[i].u) { smaller = l; }
+    else { smaller = i; }
+
+    if(r < v.size() && v[r].u < v[smaller].u) { smaller = r; } 
+
+    if(smaller != i) {
+        swap(v[i], v[smaller]);
+        min_heapify(v, smaller);
+    } 
+}
+
+void build_heap(vector<node>& v) {
+
+    int parent_last = parent(v.size() - 1);
+    for(int i = parent_last ; i >= 0; i--) {
+        min_heapify(v, i);
+    }
+}
+
+void pop_root(vector<node>& heap) {
+    heap[0] = heap.back();
+    heap.pop_back();
+    min_heapify(heap, 0);
+}
+
+vector<int> k_merge(vector<int> v[], int no_of_vectors) {
+    // Enter first elements of all vectors into heap
+    vector<node> heap;
+    int total_size = 0, array_index, i;
+    node element;
+
+    for(int i = 0 ; i < no_of_vectors ; i++) {
+        element.u = v[i][0];
+        element.array = i;
+        element.index = 0;
+        heap.push_back(element);
+        v[i].erase(v[i].begin());
+        total_size += v[i].size();
+    }
+
+    // Make the heap
+    build_heap(heap);
+
+    vector<int> sorted;
+    while(!heap.empty()) {
+        sorted.push_back(heap[0].u);
+        array_index = heap[0].array;
+        i = heap[0].index;
+        node min;
+        min.u = ULLONG_MAX;
+        total_size = 0;
+        for(int i = 0 ; i < no_of_vectors ; i++) {
+            if(!v[i].size()) continue;
+            if(min.u > v[i][0]) {
+                min.u = v[i][0];
+                min.array = i;
+                min.index = 0;
+            }
+            total_size += v[i].size();
+        }
+        if(total_size > 0){
+            v[min.array].erase(v[min.array].begin());
+            heap.push_back(min);
+        }
+        pop_root(heap);
+        total_size--; 
+    }
+    return sorted;
+}
+
+/* END MERGE CODE */
 
 /* QUICKSORT CODE */
 
@@ -63,6 +160,20 @@ vector<int> receive_vector(int rank, MPI_Comm world) {
 
 /* END WRAPPERS */
 
+/* INPUT OUTPUT HANDLERS */
+
+vector<int> input_output_from_file(char* input_file, char* output_file) {
+    ifstream in(input_file);
+    streambuf *input_buffer = cin.rdbuf();
+    cin.rdbuf(in.rdbuf());
+
+    ofstream out(output_file);
+    streambuf *coutbuf = cout.rdbuf();
+    cout.rdbuf(out.rdbuf()); 
+}
+
+/* END HANDLERS*/
+
 int main( int argc, char **argv ) {
     int rank, p, ierr, rows_receive;
     vector<int> arr;
@@ -77,7 +188,7 @@ int main( int argc, char **argv ) {
     MPI_Barrier( MPI_COMM_WORLD );
     double tbeg = MPI_Wtime();
 
-    /* write your code here */
+    /* CODE BEGINS HERE */
 
     int root_process = 0;
     int n, w, l, r, rows_send, input;
@@ -85,18 +196,40 @@ int main( int argc, char **argv ) {
     MPI_Status status;
 
     // define w = n / p =  #no_of_elements / #processors
+    // if(argc != 3) {
+    //     cout << argc << endl;
+    //     if(rank == root_process) cout << "Usage : mpirun -np NO_OF_CPUS PROGRAM_FILE INPUT_FILENAME OUTPUT_FILENAME" << endl;
+
+    //     MPI_Barrier( MPI_COMM_WORLD );
+    //     double elapsedTime = MPI_Wtime() - tbeg;
+    //     double maxTime;
+    //     MPI_Reduce( &elapsedTime, &maxTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
+    //     if ( rank == 0 ) {
+    //         printf( "Total time (s): %f\n", maxTime );
+    //     }
+
+    //     /* shut down MPI */
+    //     MPI_Finalize();
+    //     return 0;
+    // }
 
     if(rank == root_process) {
-        cin >> n;
-        // int arr[max_rows];
-        for(int i = 0 ; i < n ; i++) { 
-            cin >> input;
+        // input_output_from_file(argv[1], argv[2]);
+        while(cin >> input) {
             arr.push_back(input);
         }
 
+        std::string line;
+            while(std::getline(std::cin, line))  //input from the file in.txt
+            {
+                std::cout << line << "\n";   //output to the file out.txt
+            }
+
+        vector<int> send_vectors[p];
+        n = arr.size();
         w = n / p;
 
-        for(int id = 1 ; id < p ; id++) {
+        for(int id = 0 ; id < p ; id++) {
             l = w * id;
             r = w * ( id + 1 ) - 1;
 
@@ -106,35 +239,48 @@ int main( int argc, char **argv ) {
 
             rows_send = r - l + 1;
 
-            // send_vector(vector, starting position,
-            //              no of rows to send, rank of process to send, world)
-            send_vector(arr, l, rows_send, id, MPI_COMM_WORLD);
+            vector<int> temp(arr.begin() + l, arr.begin() + l + rows_send);
+            send_vectors[id] = temp;
+        }
+        // adding remaining elements to every vector
+        for(int k = (n / p) * p ; k < n ; k++ ) {
+            send_vectors[k % p].push_back(arr[k]);
+        }
+
+        for(int id = 1 ; id < p ; id++) {
+            send_vector(send_vectors[id], 0, send_vectors[id].size(), id, MPI_COMM_WORLD);
         }
         rows_receive = w;
+        arr = send_vectors[root_process];
     }
     else {
         arr = receive_vector(root_process, MPI_COMM_WORLD);
     }
 
-    printf("Numbers received by %d are : \n", rank);
-    for(int i = 0 ; i < arr.size() ; i++) {
-        printf("%d ", arr[i]);
-    }   
-    quick_sort(arr, 0, rows_receive - 1);
+    quick_sort(arr, 0, arr.size() - 1);
 
-    printf("\n");
+    // printf("Numbers received by %d are : \n", rank);
+    // for(int i = 0 ; i < arr.size() ; i++) {
+    //     printf("%d ", arr[i]);
+    // }
+
+    // printf("\n");
 
     // gathering number of regular samples from all processors
- //    MPI_Reduce(&j, &no_regulra_samples, 1, MPI_INT, MPI_SUM, root_process, MPI_COMM_WORLD);
- //    MPI_Gather(local_regular_samples, j, MPI_INT, regular_samples, j, MPI_INT, root_process, MPI_COMM_WORLD); 
+    if(rank != root_process) {
+        send_vector(arr, 0, arr.size(), root_process, MPI_COMM_WORLD);
+    }
+    else {
+        vector<int> sorted_arrays[p];
+        sorted_arrays[0] = arr;
+        for(int id = 1 ; id < p ; id++ ){
+            sorted_arrays[id] = receive_vector(id, MPI_COMM_WORLD);
+        }
+        vector<int> sorted = k_merge(sorted_arrays, p);
+        print_vector(sorted);
+    }
 
- //    int pivots[max_rows / p], no_of_pivots;
-
- //    if(rank == root_process) {
- //        // quick_sort(regular_samples, 0, no_regular_samples - 1);
-	// }
-
-    /* Code ends here */
+    /* CODE ENDS HERE */
 
 
     MPI_Barrier( MPI_COMM_WORLD );
