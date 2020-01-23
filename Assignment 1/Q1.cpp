@@ -196,22 +196,41 @@ int main( int argc, char **argv ) {
     MPI_Status status;
 
     // define w = n / p =  #no_of_elements / #processors
-    // if(argc != 3) {
-    //     cout << argc << endl;
-    //     if(rank == root_process) cout << "Usage : mpirun -np NO_OF_CPUS PROGRAM_FILE INPUT_FILENAME OUTPUT_FILENAME" << endl;
+    if(argc != 3) {
+        if(rank == root_process) cout << "Usage : mpirun -np NO_OF_CPUS OBJECT_FILE INPUT_FILENAME OUTPUT_FILENAME" << endl;
 
-    //     MPI_Barrier( MPI_COMM_WORLD );
-    //     double elapsedTime = MPI_Wtime() - tbeg;
-    //     double maxTime;
-    //     MPI_Reduce( &elapsedTime, &maxTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
-    //     if ( rank == 0 ) {
-    //         printf( "Total time (s): %f\n", maxTime );
-    //     }
+        /* BEGIN END SEQUENCE*/
+        MPI_Barrier( MPI_COMM_WORLD );
+        double elapsedTime = MPI_Wtime() - tbeg;
+        double maxTime;
+        MPI_Reduce( &elapsedTime, &maxTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
+        if ( rank == 0 ) {
+            printf( "Total time (s): %f\n", maxTime );
+        }
 
-    //     /* shut down MPI */
-    //     MPI_Finalize();
-    //     return 0;
-    // }
+        /* shut down MPI */
+        MPI_Finalize();
+        return 0;
+        /* END END SEQUENCE*/
+    }
+
+    /* BEGIN REDIRECTION OF INPUT OUTPUT */
+    char* input_filename = argv[1];
+    char* output_filename = argv[2]; 
+    fstream out_file, in_file; 
+    in_file.open(input_filename, ios::in);
+    out_file.open(output_filename, ios::out); 
+
+    streambuf* stream_buffer_cout = cout.rdbuf(); 
+    streambuf* stream_buffer_cin = cin.rdbuf(); 
+
+    streambuf* output_buffer = out_file.rdbuf(); 
+    streambuf* input_buffer = in_file.rdbuf(); 
+  
+    cout.rdbuf(output_buffer); 
+    cin.rdbuf(input_buffer);
+
+    /* END REDIRECTION OF COUT TO FILE AND CIN FROM FILE */
 
     if(rank == root_process) {
         // input_output_from_file(argv[1], argv[2]);
@@ -259,13 +278,6 @@ int main( int argc, char **argv ) {
 
     quick_sort(arr, 0, arr.size() - 1);
 
-    // printf("Numbers received by %d are : \n", rank);
-    // for(int i = 0 ; i < arr.size() ; i++) {
-    //     printf("%d ", arr[i]);
-    // }
-
-    // printf("\n");
-
     // gathering number of regular samples from all processors
     if(rank != root_process) {
         send_vector(arr, 0, arr.size(), root_process, MPI_COMM_WORLD);
@@ -279,6 +291,12 @@ int main( int argc, char **argv ) {
         vector<int> sorted = k_merge(sorted_arrays, p);
         print_vector(sorted);
     }
+
+    /* RESET BUFFER STREAMS */
+    cout.rdbuf(stream_buffer_cout); 
+    out_file.close(); 
+    in_file.close(); 
+    /* END RESET */
 
     /* CODE ENDS HERE */
 

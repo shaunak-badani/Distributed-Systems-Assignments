@@ -5,6 +5,8 @@
 #include <bits/stdc++.h>
 #include <limits.h>
 #include "mpi.h"
+#include <fstream> 
+#include <iostream>
 
 #define ll long long int
 
@@ -28,6 +30,35 @@ void print_distancearray(ll* d, ll V, ll source) {
         if(i != source)
             cout << i << " " << d[i] << endl;
     }
+}
+
+void redirect_input_output(char* input_filename, char* output_filename) {
+    fstream out_file, in_file; 
+    // fstream in_file;
+    // char* file_name = argv[1];
+    // cout << file_name;
+    in_file.open(input_filename, ios::in);
+    out_file.open(output_filename, ios::out); 
+
+    // Backup streambuffers of  cout 
+    streambuf* stream_buffer_cout = cout.rdbuf(); 
+    streambuf* stream_buffer_cin = cin.rdbuf(); 
+  
+    // Get the streambuffer of the file 
+    streambuf* output_buffer = out_file.rdbuf(); 
+    streambuf* input_buffer = in_file.rdbuf(); 
+  
+    // Redirect cout to file 
+    cout.rdbuf(output_buffer); 
+    cin.rdbuf(input_buffer);
+  
+    // Redirect cout back to screen 
+    // cout.rdbuf(stream_buffer_cout); 
+    // cout << "This line is written to screen" << endl; 
+  
+    out_file.close(); 
+    in_file.close(); 
+    // return 0; 
 }
 
 
@@ -87,9 +118,29 @@ int main( int argc, char **argv ) {
     double tbeg = MPI_Wtime();
 
     /* write your code here */
+
     ll V, E, u, v, w, source, adj[1000][1000];
 
+    /* BEGIN REDIRECTION OF INPUT OUTPUT */
+    char* input_filename = argv[1];
+    char* output_filename = argv[2]; 
+    fstream out_file, in_file; 
+    in_file.open(input_filename, ios::in);
+    out_file.open(output_filename, ios::out); 
+
+    streambuf* stream_buffer_cout = cout.rdbuf(); 
+    streambuf* stream_buffer_cin = cin.rdbuf(); 
+
+    streambuf* output_buffer = out_file.rdbuf(); 
+    streambuf* input_buffer = in_file.rdbuf(); 
+  
+    cout.rdbuf(output_buffer); 
+    cin.rdbuf(input_buffer);
+
+    /* END REDIRECTION OF COUT TO FILE AND CIN FROM FILE */
+
     if(rank == 0) {
+        
         cin >> V >> E;
 
         // initializing the adjacency matrix
@@ -123,11 +174,20 @@ int main( int argc, char **argv ) {
     ll *d;
 
     d = parallelized_bellman_ford(adj, V, source, start, end, MPI_COMM_WORLD);
-    if(rank == 0)
+    if(rank == 0) {
         print_distancearray(d, V, source);
+         
+    }
+
+    /* RESET BUFFER STREAMS */
+    cout.rdbuf(stream_buffer_cout); 
+    out_file.close(); 
+    in_file.close(); 
+    /* END RESET */
 
     /* CODE ENDS HERE */
 
+    
 
     MPI_Barrier( MPI_COMM_WORLD );
     double elapsedTime = MPI_Wtime() - tbeg;

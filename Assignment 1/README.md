@@ -6,7 +6,7 @@
 * Run the following :
 ```
 mpic++ Q<no>.cpp -o <objectfile>
-mpirun -np <no_of_cpus> <objectfile>
+mpirun -np <no_of_cpus> <objectfile> <inputfilename> <outputfilename>
 ```
 ---
 
