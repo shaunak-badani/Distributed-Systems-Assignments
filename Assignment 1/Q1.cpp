@@ -8,18 +8,19 @@
 #define send_data_tag 2001
 #define return_data_tag 2002
 #define max_rows 10000
+#define ll long long int
 
 using namespace std;
 
-void print_vector(vector<int>& v) {
-    for(vector<int>::iterator i = v.begin() ; i != v.end() ; i++) cout << *i << " " ;
+void print_vector(vector<ll>& v) {
+    for(vector<ll>::iterator i = v.begin() ; i != v.end() ; i++) cout << *i << " " ;
     cout << endl;
 }
 
 /* BEGIN K WAY MERGE CODE */
 
 typedef struct node {
-    unsigned long long int u;
+    long long int u;
     int array; // array element from which it was picked
     int index; // 
 }node;
@@ -59,7 +60,7 @@ void pop_root(vector<node>& heap) {
     min_heapify(heap, 0);
 }
 
-vector<int> k_merge(vector<int> v[], int no_of_vectors) {
+vector<ll> k_merge(vector<ll> v[], int no_of_vectors) {
     // Enter first elements of all vectors into heap
     vector<node> heap;
     int total_size = 0, array_index, i;
@@ -77,13 +78,13 @@ vector<int> k_merge(vector<int> v[], int no_of_vectors) {
     // Make the heap
     build_heap(heap);
 
-    vector<int> sorted;
+    vector<ll> sorted;
     while(!heap.empty()) {
         sorted.push_back(heap[0].u);
         array_index = heap[0].array;
         i = heap[0].index;
         node min;
-        min.u = ULLONG_MAX;
+        min.u = LLONG_MAX;
         total_size = 0;
         for(int i = 0 ; i < no_of_vectors ; i++) {
             if(!v[i].size()) continue;
@@ -108,14 +109,14 @@ vector<int> k_merge(vector<int> v[], int no_of_vectors) {
 
 /* QUICKSORT CODE */
 
-void swap(int *a, int *b) {
+void swap(ll *a, ll *b) {
     int temp = *a;
     *a = *b;
     *b = temp;
 }
 
 // Returns the position of the pivot
-int partition(vector<int>& arr, int l, int r) {
+int partition(vector<ll>& arr, int l, int r) {
     // choosing pivot to be the last element
     int pivot = arr[r];
     int i = l - 1;
@@ -130,7 +131,7 @@ int partition(vector<int>& arr, int l, int r) {
     return i;
 }
 
-void quick_sort(vector<int>& arr, int l, int r) {
+void quick_sort(vector<ll>& arr, int l, int r) {
     if( l > r ) { return; }
 
     int q = partition(arr, l, r);
@@ -142,19 +143,19 @@ void quick_sort(vector<int>& arr, int l, int r) {
 
 /* VECTOR SEND AND RECEIVE WRAPPERS */
 
-int send_vector(vector<int>& v, int start_pos, int no_of_elements, int rank, MPI_Comm world) {
+int send_vector(vector<ll>& v, int start_pos, int no_of_elements, int rank, MPI_Comm world) {
     int ierr = MPI_Send( &no_of_elements, 1 , MPI_INT, rank, send_data_tag, world);
-    ierr = MPI_Send( &v[start_pos], no_of_elements, MPI_INT, rank, send_data_tag, world);   
+    ierr = MPI_Send( &v[start_pos], no_of_elements, MPI_LONG_LONG, rank, send_data_tag, world);   
     return ierr;
 }
 
-vector<int> receive_vector(int rank, MPI_Comm world) {
-    vector<int> v;
+vector<ll> receive_vector(int rank, MPI_Comm world) {
+    vector<ll> v;
     int rows_receive, ierr;
     MPI_Status status;
     ierr = MPI_Recv( &rows_receive, 1, MPI_INT, rank, send_data_tag, world, &status);
     v.resize(rows_receive);
-    ierr = MPI_Recv( &v[0], rows_receive, MPI_INT, rank, send_data_tag, world, &status);
+    ierr = MPI_Recv( &v[0], rows_receive, MPI_LONG_LONG, rank, send_data_tag, world, &status);
     return v;
 }
 
@@ -176,7 +177,7 @@ vector<int> input_output_from_file(char* input_file, char* output_file) {
 
 int main( int argc, char **argv ) {
     int rank, p, ierr, rows_receive;
-    vector<int> arr;
+    vector<ll> arr;
 
     /* start up MPI */
     MPI_Init( &argc, &argv );
@@ -233,20 +234,14 @@ int main( int argc, char **argv ) {
     /* END REDIRECTION OF COUT TO FILE AND CIN FROM FILE */
 
     if(rank == root_process) {
-        // input_output_from_file(argv[1], argv[2]);
         while(cin >> input) {
             arr.push_back(input);
         }
 
-        std::string line;
-            while(std::getline(std::cin, line))  //input from the file in.txt
-            {
-                std::cout << line << "\n";   //output to the file out.txt
-            }
-
-        vector<int> send_vectors[p];
         n = arr.size();
         w = n / p;
+
+        vector<ll> send_vectors[p];
 
         for(int id = 0 ; id < p ; id++) {
             l = w * id;
@@ -258,7 +253,7 @@ int main( int argc, char **argv ) {
 
             rows_send = r - l + 1;
 
-            vector<int> temp(arr.begin() + l, arr.begin() + l + rows_send);
+            vector<ll> temp(arr.begin() + l, arr.begin() + l + rows_send);
             send_vectors[id] = temp;
         }
         // adding remaining elements to every vector
@@ -283,12 +278,12 @@ int main( int argc, char **argv ) {
         send_vector(arr, 0, arr.size(), root_process, MPI_COMM_WORLD);
     }
     else {
-        vector<int> sorted_arrays[p];
+        vector<ll> sorted_arrays[p];
         sorted_arrays[0] = arr;
         for(int id = 1 ; id < p ; id++ ){
             sorted_arrays[id] = receive_vector(id, MPI_COMM_WORLD);
         }
-        vector<int> sorted = k_merge(sorted_arrays, p);
+        vector<ll> sorted = k_merge(sorted_arrays, p);
         print_vector(sorted);
     }
 
