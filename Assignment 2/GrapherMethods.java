@@ -1,13 +1,5 @@
-// import javafx.util.Pair;
 import java.util.*;
-class Edge {
-   Integer v;
-   Integer w;
-   public Edge(Integer v, Integer w) {
-      this.v = v;
-      this.w = w;
-   }
-}
+
 
 public class GrapherMethods implements Grapher {  
    static Map<String, List<List<Edge> > > graph_list;
