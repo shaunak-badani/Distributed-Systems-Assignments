@@ -18,3 +18,11 @@
     This is an example RMI program
     ```
 * This is a boilerplate of the code.
+
+### Tests for MST :
+*   ```
+    javac MST.java Edge.java test.java
+    java test < test_cases/in/1.txt
+    cat test_cases/out/1.txt
+    ```
+* Can automate process
