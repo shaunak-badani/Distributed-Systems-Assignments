@@ -3,21 +3,21 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.RemoteException; 
 import java.rmi.server.UnicastRemoteObject; 
 
-public class Server extends ImplExample { 
+public class Server extends GrapherMethods { 
    public Server() {} 
    public static void main(String args[]) { 
       try { 
          // Instantiating the implementation class 
-         ImplExample obj = new ImplExample(); 
+         GrapherMethods obj = new GrapherMethods(); 
     
          // Exporting the object of implementation class  
          // (here we are exporting the remote object to the stub) 
-         Hello stub = (Hello) UnicastRemoteObject.exportObject(obj, 0);  
+         Grapher stub = (Grapher) UnicastRemoteObject.exportObject(obj, 0);  
          
          // Binding the remote object (stub) in the registry 
          Registry registry = LocateRegistry.getRegistry(); 
          
-         registry.bind("Hello", stub);  
+         registry.bind("Grapher", stub);  
          System.err.println("Server ready"); 
       } catch (Exception e) { 
          System.err.println("Server exception: " + e.toString()); 
