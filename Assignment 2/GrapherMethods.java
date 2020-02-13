@@ -1,6 +1,5 @@
 import java.util.*;
 
-
 public class GrapherMethods implements Grapher {  
    static Map<String, List<List<Edge> > > graph_list;
 
@@ -13,14 +12,13 @@ public class GrapherMethods implements Grapher {
       // arraylist[i] -> arraylist of edges connected to it.
    }
    
-   public void add_graph(String graph_identifier, int n) {
+   public String add_graph(String graph_identifier, int n) {
       List<List<Edge> > new_graph = new ArrayList<List<Edge> >(n + 1);
       for(int i = 0 ; i <= n ; i++) { 
          new_graph.add(new ArrayList<Edge>());
       }
       graph_list.put(graph_identifier, new_graph);
-      System.out.println("Added graph : " + graph_identifier);
-      return;
+      return "Added graph : " + graph_identifier;
    }  
 
    public void print_graph(String graph_identifier) {
@@ -39,23 +37,36 @@ public class GrapherMethods implements Grapher {
       }
    }
 
-   public void add_edge(String graph_identifier, int u, int v, int w) {
+   public String add_edge(String graph_identifier, int u, int v, int w) {
       List<List<Edge> > graph_req = graph_list.get(graph_identifier);
 
       // Adding edge to u
-      Edge new_edge = new Edge(v, w);
-      graph_req.get(u).add(new_edge);
-      
-      // Adding edge to v
-      Edge rev_edge = new Edge(u, w);
-      graph_req.get(v).add(rev_edge);
+      Edge new_edge = new Edge(u, v, w);
+      try {
+         graph_req.get(u).add(new_edge);
+      } catch(Exception e) {
+         return "Graph requested not found";
+      }
 
       // Success
-      System.out.println("Added edge to " + graph_identifier + " from " + u + " to " + v + " with weight " + w);
+      return "Added edge to " + graph_identifier + " from " + u + " to " + v + " with weight " + w;
    }
 
-   public void get_mst(String graph_identifier) {
-      System.out.println("MST for " + graph_identifier + "displayed");
+   public String get_mst(String graph_identifier) {
+      List<List<Edge> > graph_req;
+      try {
+         graph_req = graph_list.get(graph_identifier);
+      } catch(Exception e) {
+         return "Graph requested not found.";
+      }
+      List<Edge> mst = MST.get_mst(graph_req);
+
+
+      // If no of edges in mst != no of vertices - 1, mst not found.      
+      if(mst.size() != graph_req.size() - 2)
+         return "-1";
+      long weight = MST.mst_weight(mst);
+      return Long.toString(weight);
    }
 
 } 

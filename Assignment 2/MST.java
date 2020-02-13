@@ -44,8 +44,6 @@ class DSU {
 
 }
 
-
-
 public class MST {    
 
     public static List<Edge> get_mst(List<List<Edge>> graph) {
