@@ -5,24 +5,23 @@
 * Run following commands on one terminal: 
     ```
     javac *.java
-    rmiregistry &
-    java Server
+    rmiregistry <port-number> &
+    java Server <port-number>
     ```
 * The server will now wait for clients to make calls.
-* On another terminal window, execute 
+* On another terminal window / client, execute 
     ```
-    java Client
+    javac Client.java
+    java Client <server-ip> <port-number>
     ```
-* On the server side, this should be printed : 
-    ```
-    This is an example RMI program
-    ```
-* This is a boilerplate of the code.
+* A command line interface is provided on the Client side, after the `java Client` command is run.
 
-### Tests for MST :
-*   ```
-    javac MST.java Edge.java test.java
-    java test < test_cases/in/1.txt
-    cat test_cases/out/1.txt
-    ```
-* Can automate process
+### Commands available :
+
+Command  | Explanation
+------------- | -------------
+add_graph \<graph-id\> \<no_of_nodes\> | Adds graph with number of vertices = `no_of_nodes` to list of graphs on the server side, with graph id = `graph_id`.
+add_edge \<graph-id\> \<u\> \<v\> \<w\>  | Adds edge from `u` to `v` with weight `w` to graph with graph id = `graph-id`.
+get_mst \<graph_id\> | Computes the sum of weights of minimum spanning tree of the graph id passed. If no MST exists, `-1` is printed.
+
+* An example is given in the `input` file.
