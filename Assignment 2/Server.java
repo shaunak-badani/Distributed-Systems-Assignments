@@ -12,7 +12,7 @@ public class Server extends GrapherMethods {
             return;
          }
          int port_number = Integer.parseInt(args[0]);
-         
+
          // Instantiating the implementation class 
          GrapherMethods obj = new GrapherMethods(); 
     
@@ -21,7 +21,7 @@ public class Server extends GrapherMethods {
          Grapher stub = (Grapher) UnicastRemoteObject.exportObject(obj, 0);  
          
          // Binding the remote object (stub) in the registry 
-         Registry registry = LocateRegistry.getRegistry("0.0.0.0", port_number); 
+         Registry registry = LocateRegistry.createRegistry(port_number); 
          
          registry.bind("Grapher", stub);  
          System.err.println("Server ready"); 

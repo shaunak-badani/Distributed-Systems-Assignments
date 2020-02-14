@@ -5,7 +5,6 @@
 * Run following commands on one terminal: 
     ```
     javac *.java
-    rmiregistry <port-number> &
     java Server <port-number>
     ```
 * The server will now wait for clients to make calls.
