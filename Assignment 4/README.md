@@ -29,4 +29,5 @@
     * Each process waits at the start to receive the process id of the process that it has to send a token to.
     * Once each process receives the token, except the root process, all processes wait to receive the token. After receiving the token, they pass it on to the id of the process they received earlier.
     * The root process on the other hand, first sends the token, after which it waits for the token to circulate around all processes, and eventually receives the token from the last process.
-    
+* Q2 :
+    * Mergesort implemented as of now.
