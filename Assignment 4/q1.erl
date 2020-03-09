@@ -9,14 +9,14 @@ send_and_receive_token(0, Token) ->
     end,
     receive
         {token, Token, Process_ID} ->
-            io:format("Process 0 received token ~w from process ~w ~n", [Token, Process_ID])
+            io:format("Process 0 received token ~w from process ~w. ~n", [Token, Process_ID])
     end.
 send_and_receive_token(Rank) ->
     receive
         {sender_id, PID} ->
             receive
                 {token, Token, Process_ID} ->
-                    io:format("Process ~w received token ~w from process ~w ~n", [Rank, Token, Process_ID]),
+                    io:format("Process ~w received token ~w from process ~w. ~n", [Rank, Token, Process_ID]),
                     PID ! {token, Token, Rank}
             end
     end.
