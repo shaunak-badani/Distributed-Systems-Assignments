@@ -1,5 +1,5 @@
 -module(q1).
--export([start/0, spawnProcesses/3, send_and_receive_token/2, send_and_receive_token/1, spawnRemainingProcesses / 4]).
+-export([main/0, spawnProcesses/3, send_and_receive_token/2, send_and_receive_token/1, spawnRemainingProcesses / 4]).
 
 
 send_and_receive_token(0, Token) ->
@@ -34,6 +34,6 @@ spawnProcesses(0, N, Token) ->
     spawnRemainingProcesses(1, N, Root, Root).
 
 
-start() ->
+main() ->
     {ok, [NoOfProcesses, Token]} = io:fread("", "~d ~d"),
     _ = spawnProcesses(0, NoOfProcesses, Token).
