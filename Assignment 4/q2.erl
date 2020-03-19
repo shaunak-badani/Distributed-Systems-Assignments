@@ -1,11 +1,14 @@
 -module(q2).
--export([start/0, print_list/1, merge / 2, mergeSort / 3, receive_all/1, receive_all/3, spawnProcesses/6, sort_and_send/1, receive_sublist/1, spawn_and_send/3]).
+-export([main/1, print_to_file/3, print_list/2, merge / 2, mergeSort / 3, receive_all/2, receive_all/4, spawnProcesses/7, sort_and_send/1, receive_sublist/1, spawn_and_send/4, collect_array_from_file/2]).
 
-print_list([ ]) ->
-    io:format("~n");
-print_list([F | Rest]) ->
-    io:format("~w ", [F]),
-    print_list(Rest).
+print_to_file(Outp_filename, StrVal,  Arr) ->
+    file:write_file(Outp_filename, io_lib:fwrite(StrVal, Arr), [append]).
+
+print_list([ ], Outp_filename) ->
+    print_to_file(Outp_filename, "~n", []);
+print_list([F | Rest], Outp_filename) ->
+    print_to_file(Outp_filename, "~w ", [F]),
+    print_list(Rest, Outp_filename).
 
 % Start mergesort code
 
@@ -53,66 +56,71 @@ receive_sublist(_) ->
 
 % The root process collects all merged sublists
 
-receive_all(Acc_Proc, Array_Acc, No_of_processes) when Acc_Proc == No_of_processes ->
-    io:format("Collected array : ~w ~n", [Array_Acc]);
-receive_all(Acc_Proc, Array_Acc, No_of_processes) ->
+receive_all(Acc_Proc, Array_Acc, No_of_processes, Outp_filename) when Acc_Proc == No_of_processes ->
+    print_list(Array_Acc, Outp_filename);
+receive_all(Acc_Proc, Array_Acc, No_of_processes, Outp_filename) ->
     receive
         {sorted_list, SubList} ->
             Merged = merge(Array_Acc, SubList),
-            receive_all(Acc_Proc + 1, Merged, No_of_processes)
+            receive_all(Acc_Proc + 1, Merged, No_of_processes, Outp_filename)
     end.
 
-receive_all(No_of_processes) ->
-    receive_all(0, [], No_of_processes).
+receive_all(No_of_processes, Outp_filename) ->
+    receive_all(0, [], No_of_processes, Outp_filename).
 
 % End collection
 
-spawn_and_send(SubList, 1, No_of_processes) ->
-    register(root_process, spawn(q2, receive_all, [No_of_processes])),
+spawn_and_send(SubList, 1, No_of_processes, Outp_filename) ->
+    register(root_process, spawn(q2, receive_all, [No_of_processes, Outp_filename])),
     Root_Pid = spawn(q2, receive_sublist, [1]),
     Root_Pid ! {sublist, SubList};
-spawn_and_send(SubList, Rank, _) ->
+spawn_and_send(SubList, Rank, _, _) ->
     PID = spawn(q2, receive_sublist, [Rank]),
     PID ! {sublist, SubList}.
 
 % Spawn processes 
 
-spawnProcesses(Current_Rank, Array, [], Numbers_Per_Proc, Len, No_of_processes) ->
+spawnProcesses(Current_Rank, Array, [], Numbers_Per_Proc, Len, No_of_processes, Outp_filename) ->
     [Current | Rest ] = Array,
     Arr_Acc = [Current],
     Len_dup = Len + 1,
-    spawnProcesses(Current_Rank, Rest, Arr_Acc, Numbers_Per_Proc, Len_dup, No_of_processes);
-spawnProcesses(Current_Rank, [], Arr_Acc, __, _, No_of_processes) ->
-    % io:format("~w ~w ~n", [Current_Rank, Arr_Acc]),
-    spawn_and_send(Arr_Acc, Current_Rank, No_of_processes);
-spawnProcesses(Current_Rank, Array, Arr_Acc, Numbers_Per_Proc, Len, No_of_processes) ->
+    spawnProcesses(Current_Rank, Rest, Arr_Acc, Numbers_Per_Proc, Len_dup, No_of_processes, Outp_filename);
+spawnProcesses(Current_Rank, [], Arr_Acc, __, _, No_of_processes, Outp_filename) ->
+    spawn_and_send(Arr_Acc, Current_Rank, No_of_processes, Outp_filename);
+spawnProcesses(Current_Rank, Array, Arr_Acc, Numbers_Per_Proc, Len, No_of_processes, Outp_filename) ->
     if 
         Current_Rank == No_of_processes ->
             [Current | Rest] = Array,
             Arr_A = lists:append(Arr_Acc, [Current]),
             Len_dup = Len + 1,
-            spawnProcesses(Current_Rank, Rest, Arr_A, Numbers_Per_Proc, Len_dup, No_of_processes);
+            spawnProcesses(Current_Rank, Rest, Arr_A, Numbers_Per_Proc, Len_dup, No_of_processes, Outp_filename);
         Len == Numbers_Per_Proc ->
-            spawn_and_send(Arr_Acc, Current_Rank, No_of_processes),
-            % io:format("~w ~w ~n", [Current_Rank, Arr_Acc]),
+            spawn_and_send(Arr_Acc, Current_Rank, No_of_processes, Outp_filename),
             Arr_B = [],
             Current_Rank_dup = Current_Rank + 1,
             Len_dup_1 = 0,  
-            spawnProcesses(Current_Rank_dup, Array, Arr_B, Numbers_Per_Proc, Len_dup_1, No_of_processes);
+            spawnProcesses(Current_Rank_dup, Array, Arr_B, Numbers_Per_Proc, Len_dup_1, No_of_processes, Outp_filename);
         true ->
             [Current | Rest] = Array,
             Arr_A = lists:append(Arr_Acc, [Current]),
             Len_dup = Len + 1,
-            spawnProcesses(Current_Rank, Rest, Arr_A, Numbers_Per_Proc, Len_dup, No_of_processes)
+            spawnProcesses(Current_Rank, Rest, Arr_A, Numbers_Per_Proc, Len_dup, No_of_processes, Outp_filename)
     end.
 
 % End spawning of processes
 
-start() ->
-    X = [10, 12, 69, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 20, 88, 87, 100, 102, 103],
+collect_array_from_file(Filename, _) ->
+    {ok, FileBuffer} = file:open(Filename, [read]),
+    {ok, Line} = file:read_line(FileBuffer),
+    StrNos = string:tokens(string:strip(Line, right, 10), [$\s]),
+    X = lists:map(fun erlang:list_to_integer/1, StrNos),
+    X.
+
+main([Inp_filename | Outp_filename]) ->
+    file:delete(Outp_filename),
+    io:format("~w ~n", [Outp_filename]),
+    X = collect_array_from_file(Inp_filename, Outp_filename),
     L = length(X),
     No_of_processes = 8,
-    % print_list(X),
     Numbers_Per_Proc = erlang:list_to_integer(erlang:float_to_list(L / No_of_processes ,[{decimals,0}])),
-    % io:format("~w ~n", [Numbers_Per_Proc]),
-    spawnProcesses(1, X, [], Numbers_Per_Proc, 0, No_of_processes).
+    spawnProcesses(1, X, [], Numbers_Per_Proc, 0, No_of_processes, Outp_filename).
